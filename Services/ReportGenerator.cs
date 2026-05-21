@@ -254,7 +254,7 @@ namespace AML.Services
 
     <!-- Donut: Alerts by Severity -->
     <div class='card'>
-        <h3>🔴 Alerts by Severity</h3>
+        <h3>Alerts by Severity</h3>
         <div class='chart-wrap'>
             <canvas id='severityChart'></canvas>
         </div>
@@ -262,7 +262,7 @@ namespace AML.Services
 
     <!-- Bar: Alerts by Transaction Type -->
     <div class='card'>
-        <h3>📊 Alerts by Transaction Type</h3>
+        <h3>Alerts by Transaction Type</h3>
         <div class='chart-wrap'>
             <canvas id='typeChart'></canvas>
         </div>
@@ -270,7 +270,7 @@ namespace AML.Services
 
     <!-- Donut: Detection Outcome -->
     <div class='card'>
-        <h3>🎯 Detection Outcome</h3>
+        <h3>Detection Outcome</h3>
         <div class='chart-wrap'>
             <canvas id='outcomeChart'></canvas>
         </div>
@@ -283,7 +283,7 @@ namespace AML.Services
 
     <!-- Performance Metrics Bars -->
     <div class='card'>
-        <h3>📈 Performance Metrics</h3>
+        <h3>Performance Metrics</h3>
 
         <div class='metric-item'>
             <div class='metric-header'>
@@ -354,7 +354,7 @@ namespace AML.Services
 
     <!-- Confusion Matrix -->
     <div class='card'>
-        <h3>🔢 Confusion Matrix</h3>
+        <h3>Confusion Matrix</h3>
         <div class='confusion'>
             <div class='cf-cell tp'>
                 <div class='n'>{report.TruePositives}</div>
@@ -377,7 +377,7 @@ namespace AML.Services
 
     <!-- Recall Gauge -->
     <div class='card'>
-        <h3>🎯 Fraud Detection Rate</h3>
+        <h3>Fraud Detection Rate</h3>
         <div class='chart-wrap'>
             <canvas id='gaugeChart'></canvas>
         </div>
@@ -387,7 +387,7 @@ namespace AML.Services
 
 <!-- Alerts Table -->
 <div class='card' style='margin-bottom:20px'>
-    <h3>🚨 Top 20 Alerts</h3>
+    <h3>Top 20 Alerts</h3>
     <table>
         <thead>
             <tr>
