@@ -1,0 +1,15 @@
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.csproj.AssemblyReference.cache
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.AssemblyInfoInputs.cache
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.AssemblyInfo.cs
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.csproj.CoreCompileInputs.cache
+/Users/roiro/Desktop/AML/bin/Debug/net7.0/AML.Core
+/Users/roiro/Desktop/AML/bin/Debug/net7.0/AML.Core.deps.json
+/Users/roiro/Desktop/AML/bin/Debug/net7.0/AML.Core.runtimeconfig.json
+/Users/roiro/Desktop/AML/bin/Debug/net7.0/AML.Core.dll
+/Users/roiro/Desktop/AML/bin/Debug/net7.0/AML.Core.pdb
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.dll
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/refint/AML.Core.dll
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.pdb
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/AML.Core.genruntimeconfig.cache
+/Users/roiro/Desktop/AML/obj/Debug/net7.0/ref/AML.Core.dll

@@ -1,0 +1,80 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using AML.Core.Models;
+
+namespace AML.Core.Rules
+{
+    /// <summary>
+    /// Applies static AML detection rules based on FATF typologies.
+    /// </summary>
+    public class RuleEngine
+    {
+        public double LargeTransactionThreshold { get; set; } = 200_000;
+        public double StructuringThreshold      { get; set; } = 9_500;
+        public double HighRiskAmountThreshold   { get; set; } = 500_000;
+
+        private readonly List<AmlRule> _rules;
+
+        public RuleEngine()
+        {
+            _rules = new List<AmlRule>
+            {
+                new AmlRule("LARGE_TRANSFER",
+                    "TRANSFER or CASH_OUT exceeds large-transaction threshold.",
+                    tx => (tx.Type == "TRANSFER" || tx.Type == "CASH_OUT")
+                          && tx.Amount >= LargeTransactionThreshold),
+
+                new AmlRule("ACCOUNT_DRAIN",
+                    "Origin account fully drained to zero in one transaction.",
+                    tx => tx.OrigAccountDrained && tx.Amount > 1_000),
+
+                new AmlRule("DEST_BALANCE_UNCHANGED",
+                    "Destination balance unchanged despite incoming funds (layering signal).",
+                    tx => tx.DestAccountUnchanged && tx.Amount > 5_000),
+
+                new AmlRule("STRUCTURING",
+                    "Transaction just below reporting threshold (structuring pattern).",
+                    tx => tx.Amount >= StructuringThreshold && tx.Amount < 10_000),
+
+                new AmlRule("ZERO_ORIGIN_LARGE_TX",
+                    "Large transfer from account with no prior balance.",
+                    tx => tx.OldbalanceOrg == 0 && tx.Amount >= 10_000),
+
+                new AmlRule("RAPID_CASH_OUT",
+                    "High-value cash-out in early simulation steps.",
+                    tx => tx.Type == "CASH_OUT" && tx.Step <= 5 && tx.Amount > 50_000),
+
+                new AmlRule("CRITICAL_AMOUNT",
+                    "Transaction exceeds critical risk threshold.",
+                    tx => tx.Amount >= HighRiskAmountThreshold),
+
+                new AmlRule("BALANCE_MISMATCH",
+                    "Origin balance change doesn't match transaction amount.",
+                    tx => tx.Type == "TRANSFER"
+                          && Math.Abs(tx.BalanceDiffOrig - tx.Amount) > 1.0
+                          && tx.OldbalanceOrg > 0),
+            };
+        }
+
+        /// <summary>Returns rule names that fired for this transaction.</summary>
+        public IReadOnlyList<string> Evaluate(Transaction tx)
+        {
+            var fired = new List<string>();
+            foreach (var rule in _rules)
+                if (rule.Condition(tx))
+                    fired.Add(rule.Name);
+            return fired;
+        }
+    }
+
+    internal class AmlRule
+    {
+        public string Name        { get; }
+        public string Description { get; }
+        public Func<Transaction, bool> Condition { get; }
+
+        public AmlRule(string name, string desc, Func<Transaction, bool> cond)
+        { Name = name; Description = desc; Condition = cond; }
+    }
+}

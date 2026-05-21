@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using AML.Core.ML;
+using AML.Core.Models;
+using AML.Core.Rules;
+
+namespace AML.Core.Services
+{
+    public class AmlDetectionService
+    {
+        private readonly RuleEngine         _ruleEngine;
+        private readonly FraudDetectionModel _mlModel;
+
+        public double MlLowThreshold      { get; set; } = 0.30;
+        public double MlMediumThreshold   { get; set; } = 0.55;
+        public double MlHighThreshold     { get; set; } = 0.75;
+        public double MlCriticalThreshold { get; set; } = 0.90;
+
+        public AmlDetectionService(RuleEngine ruleEngine, FraudDetectionModel mlModel)
+        {
+            _ruleEngine = ruleEngine;
+            _mlModel    = mlModel;
+        }
+
+        /// <summary>Analyse one transaction; returns null if clean.</summary>
+        public Alert? Analyse(Transaction tx)
+        {
+            var firedRules = _ruleEngine.Evaluate(tx);
+            double mlScore = _mlModel.IsTrained ? _mlModel.Predict(tx) : 0.0;
+
+            bool ruleAlert = firedRules.Count > 0;
+            bool mlAlert   = mlScore >= MlLowThreshold;
+
+            if (!ruleAlert && !mlAlert) return null;
+
+            var severity = ComputeSeverity(firedRules.Count, mlScore);
+            var source   = ruleAlert && mlAlert ? AlertSource.Hybrid
+                         : ruleAlert ? AlertSource.RuleBased
+                         : AlertSource.MLModel;
+
+            return new Alert
+            {
+                Transaction    = tx,
+                Severity       = severity,
+                Source         = source,
+                TriggeredRules = new List<string>(firedRules),
+                MlScore        = mlScore,
+                IsTruePositive = tx.IsFraud == 1
+            };
+        }
+
+        public IEnumerable<Alert> AnalyseBatch(IEnumerable<Transaction> transactions)
+        {
+            foreach (var tx in transactions)
+            {
+                var alert = Analyse(tx);
+                if (alert != null) yield return alert;
+            }
+        }
+
+        private AlertSeverity ComputeSeverity(int ruleCount, double mlScore)
+        {
+            AlertSeverity fromRules;
+            if      (ruleCount >= 4) fromRules = AlertSeverity.Critical;
+            else if (ruleCount == 3) fromRules = AlertSeverity.High;
+            else if (ruleCount == 2) fromRules = AlertSeverity.Medium;
+            else                     fromRules = AlertSeverity.Low;
+
+            AlertSeverity fromMl;
+            if      (mlScore >= 0.90) fromMl = AlertSeverity.Critical;
+            else if (mlScore >= 0.75) fromMl = AlertSeverity.High;
+            else if (mlScore >= 0.55) fromMl = AlertSeverity.Medium;
+            else                      fromMl = AlertSeverity.Low;
+
+            return (AlertSeverity)Math.Max((int)fromRules, (int)fromMl);
+        }
+    }
+}

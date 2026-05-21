@@ -1,0 +1,25 @@
+using System;
+using System.Collections.Generic;
+
+namespace AML.Models
+{
+    public enum AlertSeverity { Low, Medium, High, Critical }
+    public enum AlertSource   { RuleBased, MLModel, Hybrid }
+
+    public class Alert
+    {
+        public Guid          Id             { get; set; } = Guid.NewGuid();
+        public DateTime      RaisedAt       { get; set; } = DateTime.UtcNow;
+        public Transaction   Transaction    { get; set; } = null!;
+        public AlertSeverity Severity       { get; set; }
+        public AlertSource   Source         { get; set; }
+        public List<string>  TriggeredRules { get; set; } = new List<string>();
+        public double        MlScore        { get; set; }
+        public bool          IsTruePositive { get; set; }
+
+        public string Summary =>
+            string.Format("[{0}] Type={1} Amount={2:N0} MlScore={3:P1} Rules=[{4}]",
+                Severity, Transaction.Type, Transaction.Amount, MlScore,
+                string.Join(", ", TriggeredRules));
+    }
+}

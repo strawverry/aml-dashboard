@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>AML Detection Dashboard</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js'></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: linear-gradient(135deg, #1e3a5f, #0f2744);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #2d4a6e;
+        }
+        .header h1 { font-size:1.8em; color:#60a5fa; margin-bottom:6px; }
+        .header p  { color:#94a3b8; font-size:0.9em; }
+
+        /* ── KPI Cards ── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .kpi {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid #2d3f55;
+        }
+        .kpi .val  { font-size:2em; font-weight:700; margin-bottom:4px; }
+        .kpi .lbl  { color:#94a3b8; font-size:0.78em; text-transform:uppercase; }
+        .blue   { color:#60a5fa; }
+        .red    { color:#f87171; }
+        .green  { color:#34d399; }
+        .yellow { color:#fbbf24; }
+        .orange { color:#fb923c; }
+        .purple { color:#a78bfa; }
+
+        /* ── Chart Grid ── */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .chart-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #2d3f55;
+        }
+        .card h3 {
+            color: #60a5fa;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #2d3f55;
+            padding-bottom: 8px;
+        }
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+        }
+
+        /* ── Gauge ── */
+        .gauge-wrap {
+            position: relative;
+            height: 160px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+        }
+        .gauge-label {
+            font-size:2em;
+            font-weight:700;
+            margin-top:10px;
+        }
+        .gauge-sub {
+            color:#94a3b8;
+            font-size:0.8em;
+            margin-top:4px;
+        }
+
+        /* ── Metric Bars ── */
+        .metric-item {
+            margin-bottom:14px;
+        }
+        .metric-header {
+            display:flex;
+            justify-content:space-between;
+            margin-bottom:5px;
+            font-size:0.85em;
+        }
+        .metric-name { color:#94a3b8; }
+        .metric-val  { font-weight:700; }
+        .bar-bg {
+            background:#0f172a;
+            border-radius:999px;
+            height:10px;
+            overflow:hidden;
+        }
+        .bar-fill {
+            height:100%;
+            border-radius:999px;
+            transition: width 1s ease;
+        }
+
+        /* ── Confusion Matrix ── */
+        .confusion {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+            margin-top:5px;
+        }
+        .cf-cell {
+            padding:18px;
+            border-radius:8px;
+            text-align:center;
+        }
+        .cf-cell .n { font-size:2.2em; font-weight:700; }
+        .cf-cell .l { font-size:0.75em; opacity:0.8; margin-top:4px; }
+        .tp { background:#14532d; }
+        .fp { background:#7f1d1d; }
+        .fn { background:#7c2d12; }
+        .tn { background:#1e3a5f; }
+
+        /* ── Alerts Table ── */
+        table {
+            width:100%;
+            border-collapse:collapse;
+            font-size:0.82em;
+        }
+        th {
+            background:#0f172a;
+            padding:10px 12px;
+            text-align:left;
+            color:#60a5fa;
+            font-size:0.8em;
+            text-transform:uppercase;
+        }
+        td { padding:9px 12px; border-bottom:1px solid #2d3f55; }
+        tr:hover td { background:#263248; }
+        .badge {
+            padding:2px 8px;
+            border-radius:999px;
+            font-size:0.78em;
+            font-weight:700;
+        }
+        .b-critical { background:#7f1d1d; color:#fca5a5; }
+        .b-high     { background:#7c2d12; color:#fdba74; }
+        .b-medium   { background:#713f12; color:#fde68a; }
+        .b-low      { background:#14532d; color:#86efac; }
+        .b-tp       { background:#14532d; color:#86efac; }
+        .b-fp       { background:#7f1d1d; color:#fca5a5; }
+
+        /* ── Footer ── */
+        .footer {
+            text-align:center;
+            color:#475569;
+            font-size:0.78em;
+            margin-top:20px;
+            padding-top:15px;
+            border-top:1px solid #2d3f55;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class='header'>
+    <h1>🛡️ AI-Powered AML Detection Platform</h1>
+    <p>Anti-Money Laundering Dashboard — 21 May 2026 14:28 &nbsp;|&nbsp; PaySim Dataset &nbsp;|&nbsp; Random Forest + FATF Rules</p>
+</div>
+
+<!-- KPI Row -->
+<div class='kpi-row'>
+    <div class='kpi'>
+        <div class='val blue'>1,000</div>
+        <div class='lbl'>Transactions Analysed</div>
+    </div>
+    <div class='kpi'>
+        <div class='val red'>200</div>
+        <div class='lbl'>Fraud Cases</div>
+    </div>
+    <div class='kpi'>
+        <div class='val yellow'>401</div>
+        <div class='lbl'>Alerts Raised</div>
+    </div>
+    <div class='kpi'>
+        <div class='val green'>185</div>
+        <div class='lbl'>True Positives</div>
+    </div>
+    <div class='kpi'>
+        <div class='val orange'>216</div>
+        <div class='lbl'>False Positives</div>
+    </div>
+</div>
+
+<!-- Row 1: 3 Charts -->
+<div class='chart-row'>
+
+    <!-- Donut: Alerts by Severity -->
+    <div class='card'>
+        <h3>🔴 Alerts by Severity</h3>
+        <div class='chart-wrap'>
+            <canvas id='severityChart'></canvas>
+        </div>
+    </div>
+
+    <!-- Bar: Alerts by Transaction Type -->
+    <div class='card'>
+        <h3>📊 Alerts by Transaction Type</h3>
+        <div class='chart-wrap'>
+            <canvas id='typeChart'></canvas>
+        </div>
+    </div>
+
+    <!-- Donut: Detection Outcome -->
+    <div class='card'>
+        <h3>🎯 Detection Outcome</h3>
+        <div class='chart-wrap'>
+            <canvas id='outcomeChart'></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Row 2: Metrics + Confusion + Gauge -->
+<div class='chart-row'>
+
+    <!-- Performance Metrics Bars -->
+    <div class='card'>
+        <h3>📈 Performance Metrics</h3>
+
+        <div class='metric-item'>
+            <div class='metric-header'>
+                <span class='metric-name'>Accuracy</span>
+                <span class='metric-val green'>76.9%</span>
+            </div>
+            <div class='bar-bg'>
+                <div class='bar-fill'
+                     style='width:76.9%;
+                            background:linear-gradient(90deg,#059669,#34d399)'>
+                </div>
+            </div>
+        </div>
+
+        <div class='metric-item'>
+            <div class='metric-header'>
+                <span class='metric-name'>Precision</span>
+                <span class='metric-val blue'>46.1%</span>
+            </div>
+            <div class='bar-bg'>
+                <div class='bar-fill'
+                     style='width:46.1%;
+                            background:linear-gradient(90deg,#1d4ed8,#60a5fa)'>
+                </div>
+            </div>
+        </div>
+
+        <div class='metric-item'>
+            <div class='metric-header'>
+                <span class='metric-name'>Recall</span>
+                <span class='metric-val yellow'>92.5%</span>
+            </div>
+            <div class='bar-bg'>
+                <div class='bar-fill'
+                     style='width:92.5%;
+                            background:linear-gradient(90deg,#b45309,#fbbf24)'>
+                </div>
+            </div>
+        </div>
+
+        <div class='metric-item'>
+            <div class='metric-header'>
+                <span class='metric-name'>F1 Score</span>
+                <span class='metric-val orange'>61.6%</span>
+            </div>
+            <div class='bar-bg'>
+                <div class='bar-fill'
+                     style='width:61.6%;
+                            background:linear-gradient(90deg,#c2410c,#fb923c)'>
+                </div>
+            </div>
+        </div>
+
+        <div class='metric-item'>
+            <div class='metric-header'>
+                <span class='metric-name'>False Positive Rate</span>
+                <span class='metric-val red'>27.0%</span>
+            </div>
+            <div class='bar-bg'>
+                <div class='bar-fill'
+                     style='width:27.0%;
+                            background:linear-gradient(90deg,#991b1b,#f87171)'>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Confusion Matrix -->
+    <div class='card'>
+        <h3>🔢 Confusion Matrix</h3>
+        <div class='confusion'>
+            <div class='cf-cell tp'>
+                <div class='n'>185</div>
+                <div class='l'>True Positives<br/>Fraud caught ✓</div>
+            </div>
+            <div class='cf-cell fp'>
+                <div class='n'>216</div>
+                <div class='l'>False Positives<br/>Legitimate flagged ✗</div>
+            </div>
+            <div class='cf-cell fn'>
+                <div class='n'>15</div>
+                <div class='l'>False Negatives<br/>Fraud missed ✗</div>
+            </div>
+            <div class='cf-cell tn'>
+                <div class='n'>584</div>
+                <div class='l'>True Negatives<br/>Legitimate cleared ✓</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recall Gauge -->
+    <div class='card'>
+        <h3>🎯 Fraud Detection Rate</h3>
+        <div class='chart-wrap'>
+            <canvas id='gaugeChart'></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Alerts Table -->
+<div class='card' style='margin-bottom:20px'>
+    <h3>🚨 Top 20 Alerts</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Severity</th>
+                <th>ML Score</th>
+                <th>Rules Triggered</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style='color:#475569'>1</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$71,532</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>16.4%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN, RAPID_CASH_OUT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>2</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$105,979</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>1.0%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ZERO_ORIGIN_LARGE_TX, RAPID_CASH_OUT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>3</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$58,820</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>1.3%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ZERO_ORIGIN_LARGE_TX, RAPID_CASH_OUT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>4</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$761,507</td>
+                <td><span class='badge b-high'>High</span></td>
+                <td>0.8%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ZERO_ORIGIN_LARGE_TX, CRITICAL_AMOUNT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>5</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$10,000,000</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>90.0%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, DEST_BALANCE_UNCHANGED, CRITICAL_AMOUNT</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>6</td>
+                <td>PAYMENT</td>
+                <td style='color:#fbbf24'>$9,762</td>
+                <td><span class='badge b-low'>Low</span></td>
+                <td>1.1%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>STRUCTURING</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>7</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$82,686</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>1.3%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ZERO_ORIGIN_LARGE_TX, RAPID_CASH_OUT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>8</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$3,964,130</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>100.0%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN, DEST_BALANCE_UNCHANGED, CRITICAL_AMOUNT</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>9</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$184,987</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>15.7%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN, BALANCE_MISMATCH</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>10</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$982,863</td>
+                <td><span class='badge b-high'>High</span></td>
+                <td>0.8%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ZERO_ORIGIN_LARGE_TX, CRITICAL_AMOUNT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>11</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$13,707</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>92.8%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>12</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$345,699</td>
+                <td><span class='badge b-high'>High</span></td>
+                <td>22.0%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN, BALANCE_MISMATCH</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr><tr>
+                <td style='color:#475569'>13</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$350,706</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>98.6%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>14</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$59,835</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>99.9%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN, DEST_BALANCE_UNCHANGED</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>15</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$48,375</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>94.1%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>16</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$13,704</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>92.8%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ACCOUNT_DRAIN</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>17</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$361,560</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>98.6%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>18</td>
+                <td>TRANSFER</td>
+                <td style='color:#fbbf24'>$2,539,898</td>
+                <td><span class='badge b-critical'>Critical</span></td>
+                <td>98.6%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN, CRITICAL_AMOUNT</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>19</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$235,239</td>
+                <td><span class='badge b-high'>High</span></td>
+                <td>56.1%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>LARGE_TRANSFER, ACCOUNT_DRAIN, RAPID_CASH_OUT</td>
+                <td><span class='badge b-tp'>✓ Fraud</span></td>
+            </tr><tr>
+                <td style='color:#475569'>20</td>
+                <td>CASH_OUT</td>
+                <td style='color:#fbbf24'>$114,712</td>
+                <td><span class='badge b-medium'>Medium</span></td>
+                <td>1.0%</td>
+                <td style='font-size:0.8em;color:#94a3b8'>ZERO_ORIGIN_LARGE_TX, RAPID_CASH_OUT</td>
+                <td><span class='badge b-fp'>✗ False Alarm</span></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class='footer'>
+    <p>AI-Powered AML Detection Platform &nbsp;|&nbsp; TheGirls Team &nbsp;|&nbsp;
+       Built with C# .NET 7 &nbsp;|&nbsp; Random Forest Classifier + FATF Rule Engine</p>
+</div>
+
+<script>
+// ── Chart defaults ────────────────────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#2d3f55';
+
+// ── Severity Donut ────────────────────────────────────────────
+new Chart(document.getElementById('severityChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Critical','High','Medium','Low'],
+        datasets: [{
+            data: [154,103,105,39],
+            backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e'],
+            borderWidth: 0,
+            hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position:'bottom', labels:{ padding:12, font:{size:11} } }
+        }
+    }
+});
+
+// ── Type Bar Chart ────────────────────────────────────────────
+new Chart(document.getElementById('typeChart'), {
+    type: 'bar',
+    data: {
+        labels: ['CASH_OUT','TRANSFER','PAYMENT','CASH_IN','DEBIT'],
+        datasets: [{
+            label: 'Alerts',
+            data: [211,173,12,4,1],
+            backgroundColor: ['#3b82f6','#f97316','#22c55e','#a855f7','#ef4444'],
+            borderRadius: 6,
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display:false } },
+        scales: {
+            y: { grid:{ color:'#2d3f55' }, ticks:{ color:'#94a3b8' } },
+            x: { grid:{ display:false }, ticks:{ color:'#94a3b8' } }
+        }
+    }
+});
+
+// ── Outcome Donut ─────────────────────────────────────────────
+new Chart(document.getElementById('outcomeChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['True Positives','False Positives','False Negatives','True Negatives'],
+        datasets: [{
+            data: [185,216,
+                   15,584],
+            backgroundColor: ['#22c55e','#ef4444','#f97316','#3b82f6'],
+            borderWidth: 0,
+            hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position:'bottom', labels:{ padding:10, font:{size:10} } }
+        }
+    }
+});
+
+// ── Recall Gauge ──────────────────────────────────────────────
+new Chart(document.getElementById('gaugeChart'), {
+    type: 'doughnut',
+    data: {
+        datasets: [{
+            data: [92.5, 7.5],
+            backgroundColor: ['#22c55e','#1e293b'],
+            borderWidth: 0,
+            circumference: 180,
+            rotation: 270
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '75%',
+        plugins: {
+            legend: { display:false },
+            tooltip: { enabled:false }
+        }
+    },
+    plugins: [{
+        id: 'gaugeText',
+        afterDraw(chart) {
+            const { ctx, chartArea:{left,right,top,bottom} } = chart;
+            const cx = (left+right)/2, cy = (top+bottom)/2 + 30;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 28px Segoe UI';
+            ctx.fillText('92.5%', cx, cy);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px Segoe UI';
+            ctx.fillText('Recall Rate', cx, cy+22);
+            ctx.restore();
+        }
+    }]
+});
+</script>
+</body>
+</html>
