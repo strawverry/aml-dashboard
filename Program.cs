@@ -10,6 +10,7 @@ class Program
 {
     static void Main(string[] args)
     {
+        Tests.RunAll();
         Console.WriteLine("╔═══════════════════════════════════════════════╗");
         Console.WriteLine("║     AI-Powered AML Detection Platform        ║");
         Console.WriteLine("╚═══════════════════════════════════════════════╝");
